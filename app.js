@@ -3,7 +3,7 @@
 // Trage deinen API-Key unten ein!
 
 // WICHTIG: Hier deinen Finnhub API-Key eintragen!
-const FINNHUB_API_KEY = 'DEIN_FINNHUB_API_KEY_HIER';
+const FINNHUB_API_KEY = d48eut1r01qnpsnnh2qgd48eut1r01qnpsnnh2r0;
 
 // Unternehmensdaten mit Ticker, CIK und IR-Seiten
 const companies = [
