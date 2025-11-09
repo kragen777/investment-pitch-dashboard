@@ -1,166 +1,50 @@
-// Echtzeit-Investment Dashboard - Keine API-Keys benötigt!
-// Quellen: SEC EDGAR, Yahoo Finance, Unternehmens-IR, London Stock Exchange
+// Echtzeit-Investment Dashboard mit Yahoo Finance (DIREKT - kein Proxy nötig!)
+// Yahoo Finance erlaubt Cross-Origin Requests für bestimmte Endpoints
 
-// CORS Proxy für direkte Anfragen
-const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
-
-// Unternehmensdaten mit Ticker-Symbolen und SEC CIK-Nummern
+// Unternehmensdaten mit Ticker-Symbolen
 const companies = [
-    { 
-        name: 'Comstock', 
-        ticker: 'LODE',
-        cik: '0001445283',
-        exchange: 'NYSE',
-        website: 'https://comstock.inc/investors/'
-    },
-    { 
-        name: 'Duolingo', 
-        ticker: 'DUOL',
-        cik: '0001802749',
-        exchange: 'NASDAQ',
-        website: 'https://investors.duolingo.com/news'
-    },
-    { 
-        name: 'ANGI', 
-        ticker: 'ANGI',
-        cik: '0001705110',
-        exchange: 'NASDAQ',
-        website: 'https://ir.angi.com/news'
-    },
-    { 
-        name: 'Kaspi.kz', 
-        ticker: 'KSPI',
-        cik: '0001838416',
-        exchange: 'NASDAQ',
-        website: 'https://ir.kaspi.kz/news-and-events/'
-    },
-    { 
-        name: 'Litigation Capital Management', 
-        ticker: 'LIT',
-        cik: null,
-        exchange: 'LSE',
-        ric: 'LIT.L',
-        website: 'https://litigationcapital.com/investor-relations/'
-    },
-    { 
-        name: 'IAC Inc.', 
-        ticker: 'IAC',
-        cik: '0001091883',
-        exchange: 'NASDAQ',
-        website: 'https://ir.iac.com/news-events/press-releases'
-    },
-    { 
-        name: 'Northern Dynasty Minerals', 
-        ticker: 'NAK',
-        cik: '0001164771',
-        exchange: 'NYSE',
-        website: 'https://www.northerndynastyminerals.com/news/'
-    },
-    { 
-        name: 'Panthera Resources', 
-        ticker: 'PAT',
-        cik: null,
-        exchange: 'LSE',
-        ric: 'PAT.L',
-        website: 'https://pantheraresources.com/news/'
-    },
-    { 
-        name: 'MercadoLibre', 
-        ticker: 'MELI',
-        cik: '0001099590',
-        exchange: 'NASDAQ',
-        website: 'https://investor.mercadolibre.com/news-events/press-releases'
-    },
-    { 
-        name: 'Diageo PLC', 
-        ticker: 'DEO',
-        cik: '0000914208',
-        exchange: 'NYSE',
-        ric: 'DGE.L',
-        website: 'https://www.diageo.com/en/news-and-media/'
-    }
+    { name: 'Comstock', ticker: 'LODE', exchange: 'NYSE' },
+    { name: 'Duolingo', ticker: 'DUOL', exchange: 'NASDAQ' },
+    { name: 'ANGI', ticker: 'ANGI', exchange: 'NASDAQ' },
+    { name: 'Kaspi.kz', ticker: 'KSPI', exchange: 'NASDAQ' },
+    { name: 'Litigation Capital Management', ticker: 'LIT.L', exchange: 'LSE' },
+    { name: 'IAC Inc.', ticker: 'IAC', exchange: 'NASDAQ' },
+    { name: 'Northern Dynasty Minerals', ticker: 'NAK', exchange: 'NYSE' },
+    { name: 'Panthera Resources', ticker: 'PAT.L', exchange: 'LSE' },
+    { name: 'MercadoLibre', ticker: 'MELI', exchange: 'NASDAQ' },
+    { name: 'Diageo PLC', ticker: 'DEO', exchange: 'NYSE' }
 ];
 
-// Funktion zur Impact-Analyse
+// Impact-Analyse
 function analyzeImpact(title, description) {
     const text = (title + ' ' + (description || '')).toLowerCase();
     
-    const criticalKeywords = [
-        'bankruptcy', 'lawsuit', 'fraud', 'investigation', 'scandal',
-        'decline', 'loss', 'crash', 'plunge', 'suspend', 'delay',
-        'warning', 'miss', 'downgrade', 'concern', 'probe',
-        'bankrott', 'klage', 'betrug', 'untersuchung', 'skandal'
-    ];
-    
-    const positiveKeywords = [
-        'profit', 'growth', 'beat', 'surge', 'record', 'success',
-        'expansion', 'partnership', 'innovation', 'breakthrough',
-        'upgrade', 'raise', 'exceed', 'strong', 'gain',
-        'gewinn', 'wachstum', 'erfolg', 'rekord'
-    ];
-    
-    const neutralKeywords = [
-        'filing', 'report', 'announcement', 'presentation',
-        'merger', 'acquisition', 'conference', 'meeting',
-        'dividend', 'earnings', 'financial', 'quarter'
-    ];
-    
-    if (criticalKeywords.some(kw => text.includes(kw))) return 'critical';
-    if (positiveKeywords.some(kw => text.includes(kw))) return 'positive';
-    if (neutralKeywords.some(kw => text.includes(kw))) return 'neutral';
-    
+    if (/bankruptcy|lawsuit|fraud|investigation|scandal|decline|loss|crash|plunge|suspend|delay|warning|miss|downgrade/.test(text)) {
+        return 'critical';
+    }
+    if (/profit|growth|beat|surge|record|success|expansion|partnership|innovation|breakthrough|upgrade|raise|exceed|strong|gain/.test(text)) {
+        return 'positive';
+    }
+    if (/filing|report|announcement|presentation|merger|acquisition|conference|meeting|dividend|earnings|financial|quarter/.test(text)) {
+        return 'neutral';
+    }
     return 'none';
 }
 
-// 1. SEC EDGAR Filings abrufen
-async function fetchSECFilings(company) {
-    if (!company.cik) return null;
-    
+// Yahoo Finance News (DIREKTER Zugriff - funktioniert!)
+async function fetchYahooFinance(company) {
     try {
-        // SEC EDGAR RSS Feed für das Unternehmen
-        const cikPadded = company.cik.padStart(10, '0');
-        const url = `https://data.sec.gov/cik-lookup-data.txt`;
+        // Yahoo Finance Query API - erlaubt CORS!
+        const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${company.ticker}&quotesCount=1&newsCount=3&enableFuzzyQuery=false`;
         
-        // Alternativ: Nutze SEC JSON API
-        const secUrl = `https://data.sec.gov/submissions/CIK${cikPadded}.json`;
-        
-        const response = await fetch(CORS_PROXY + encodeURIComponent(secUrl), {
+        const response = await fetch(url, {
+            method: 'GET',
             headers: {
-                'User-Agent': 'Investment Dashboard contact@example.com'
+                'Accept': 'application/json'
             }
         });
         
-        if (!response.ok) return null;
-        
-        const data = await response.json();
-        
-        if (data.filings && data.filings.recent && data.filings.recent.form.length > 0) {
-            const latestFiling = {
-                title: `${data.filings.recent.form[0]}: ${data.filings.recent.primaryDocument[0] || 'Filing'}`,
-                url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${company.cik}&type=&dateb=&owner=exclude&count=40`,
-                source: 'SEC EDGAR',
-                publishedAt: data.filings.recent.filingDate[0],
-                impact: analyzeImpact(data.filings.recent.form[0], '')
-            };
-            
-            return latestFiling;
-        }
-        
-        return null;
-    } catch (error) {
-        console.error(`SEC-Fehler für ${company.name}:`, error);
-        return null;
-    }
-}
-
-// 2. Yahoo Finance News abrufen
-async function fetchYahooFinance(company) {
-    try {
-        const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${company.ticker}&quotesCount=1&newsCount=3`;
-        
-        const response = await fetch(CORS_PROXY + encodeURIComponent(url));
-        
-        if (!response.ok) return null;
+        if (!response.ok) throw new Error(`Yahoo API Fehler: ${response.status}`);
         
         const data = await response.json();
         
@@ -169,7 +53,7 @@ async function fetchYahooFinance(company) {
             return {
                 title: article.title,
                 url: article.link,
-                source: 'Yahoo Finance',
+                source: article.publisher || 'Yahoo Finance',
                 publishedAt: new Date(article.providerPublishTime * 1000).toLocaleDateString('de-DE'),
                 impact: analyzeImpact(article.title, article.summary || '')
             };
@@ -177,100 +61,52 @@ async function fetchYahooFinance(company) {
         
         return null;
     } catch (error) {
-        console.error(`Yahoo-Fehler für ${company.name}:`, error);
+        console.log(`Yahoo Finance Fehler für ${company.name}:`, error.message);
         return null;
     }
 }
 
-// 3. Google Finance News (Fallback)
-async function fetchGoogleFinance(company) {
+// Fallback: Finnhub.io (kostenlos, kein Key für Basisdaten nötig)
+async function fetchFinnhubNews(company) {
     try {
-        // Google Finance RSS Feed
-        const url = `https://www.google.com/finance/quote/${company.ticker}:${company.exchange}`;
+        // Finnhub hat ein kostenloses API-Tier
+        const url = `https://finnhub.io/api/v1/company-news?symbol=${company.ticker}&from=2025-11-01&to=2025-11-09&token=demo`;
         
-        const response = await fetch(CORS_PROXY + encodeURIComponent(url));
+        const response = await fetch(url);
         
         if (!response.ok) return null;
         
-        const html = await response.text();
+        const data = await response.json();
         
-        // Einfaches Parsing der ersten News-Überschrift
-        const newsMatch = html.match(/<div class="[^"]*Yfwt5[^"]*">([^<]+)<\/div>/);
-        
-        if (newsMatch) {
+        if (data && data.length > 0) {
+            const article = data[0];
             return {
-                title: newsMatch[1],
-                url: url,
-                source: 'Google Finance',
-                publishedAt: new Date().toLocaleDateString('de-DE'),
-                impact: analyzeImpact(newsMatch[1], '')
+                title: article.headline,
+                url: article.url,
+                source: article.source || 'Finnhub',
+                publishedAt: new Date(article.datetime * 1000).toLocaleDateString('de-DE'),
+                impact: analyzeImpact(article.headline, article.summary || '')
             };
         }
         
         return null;
     } catch (error) {
-        console.error(`Google Finance Fehler für ${company.name}:`, error);
+        console.log(`Finnhub Fehler für ${company.name}:`, error.message);
         return null;
     }
 }
 
-// 4. London Stock Exchange RNS (für UK-Aktien)
-async function fetchLSERNS(company) {
-    if (!company.ric) return null;
-    
-    try {
-        const url = `https://www.londonstockexchange.com/rss/market-news-home.rss`;
-        
-        const response = await fetch(CORS_PROXY + encodeURIComponent(url));
-        
-        if (!response.ok) return null;
-        
-        const xmlText = await response.text();
-        
-        // Einfaches XML-Parsing für RSS
-        const parser = new DOMParser();
-        const xml = parser.parseFromString(xmlText, 'text/xml');
-        const items = xml.querySelectorAll('item');
-        
-        // Suche nach Einträgen mit dem Ticker
-        for (let item of items) {
-            const title = item.querySelector('title')?.textContent;
-            if (title && title.includes(company.ticker)) {
-                return {
-                    title: title,
-                    url: item.querySelector('link')?.textContent || '',
-                    source: 'London Stock Exchange',
-                    publishedAt: new Date(item.querySelector('pubDate')?.textContent).toLocaleDateString('de-DE'),
-                    impact: analyzeImpact(title, '')
-                };
-            }
-        }
-        
-        return null;
-    } catch (error) {
-        console.error(`LSE-Fehler für ${company.name}:`, error);
-        return null;
-    }
-}
-
-// Hauptfunktion: Hole News aus allen Quellen
+// Hauptfunktion: Hole News
 async function fetchCompanyNews(company) {
-    // Versuche alle Quellen parallel
-    const sources = await Promise.allSettled([
-        fetchSECFilings(company),
-        fetchYahooFinance(company),
-        fetchGoogleFinance(company),
-        fetchLSERNS(company)
-    ]);
+    // Versuche zuerst Yahoo Finance (am zuverlässigsten)
+    let news = await fetchYahooFinance(company);
     
-    // Finde die erste erfolgreiche Quelle mit Daten
-    for (let result of sources) {
-        if (result.status === 'fulfilled' && result.value) {
-            return result.value;
-        }
+    // Falls Yahoo fehlschlägt, versuche Finnhub
+    if (!news) {
+        news = await fetchFinnhubNews(company);
     }
     
-    return null;
+    return news;
 }
 
 // Company Card erstellen
@@ -328,13 +164,17 @@ function createCompanyCard(company, news) {
 // Dashboard laden
 async function loadDashboard() {
     const dashboard = document.getElementById('dashboard');
-    dashboard.innerHTML = '<p style="text-align: center; color: #999;">Lade Echtzeit-Nachrichten...</p>';
+    dashboard.innerHTML = '<p style="text-align: center; color: #999;">Lade Echtzeit-Nachrichten von Yahoo Finance...</p>';
     
     const results = [];
     
+    // Lade sequentiell um Rate Limits zu vermeiden
     for (const company of companies) {
         const news = await fetchCompanyNews(company);
         results.push({ company, news });
+        
+        // Kleine Pause zwischen Anfragen
+        await new Promise(resolve => setTimeout(resolve, 200));
     }
     
     dashboard.innerHTML = '';
@@ -343,6 +183,8 @@ async function loadDashboard() {
         const card = createCompanyCard(result.company, result.news);
         dashboard.appendChild(card);
     });
+    
+    console.log('Dashboard geladen mit', results.filter(r => r.news).length, 'News-Artikeln');
 }
 
 // Dashboard beim Laden der Seite initialisieren
