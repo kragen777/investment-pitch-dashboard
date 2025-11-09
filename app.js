@@ -1,5 +1,5 @@
 // NewsAPI Key - Bitte durch eigenen Key ersetzen
-const NEWS_API_KEY = 'DEIN_NEWSAPI_KEY_HIER';
+const NEWS_API_KEY = a42d7ad92d2a4bf69139b63856a9fd3f;
 
 // Liste der zu überwachenden Unternehmen
 const companies = [
