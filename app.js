@@ -6,8 +6,7 @@
 const FINNHUB_API_KEY = 'd48eut1r01qnpsnnh2qgd48eut1r01qnpsnnh2r0';
 
 // URL zur pitches.json im Investment-Dashboard Repository
-const PITCHES_JSON_URL = 'https://raw.githubusercontent.com/kragen777/Investment-Dashboard/main/pitches.json';
-
+const PITCHES_JSON_URL = 'pitches.json';
 // Globale Variable für Companies (wird aus pitches.json geladen)
 let companies = [];
 
