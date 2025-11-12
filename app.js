@@ -1,83 +1,51 @@
-// ECHTZEIT Investment Dashboard - Finnhub API + Yahoo Finance + IR-Seiten
+// ECHTZEIT Investment Dashboard - Lädt Daten aus pitches.json
 // Registriere dich kostenlos: https://finnhub.io/register
 // Trage deinen API-Key unten ein!
 
 // WICHTIG: Hier deinen Finnhub API-Key eintragen!
-const FINNHUB_API_KEY = d48eut1r01qnpsnnh2qgd48eut1r01qnpsnnh2r0;
+const FINNHUB_API_KEY = 'd48eut1r01qnpsnnh2qgd48eut1r01qnpsnnh2r0';
 
-// Unternehmensdaten mit Ticker, CIK und IR-Seiten
-const companies = [
-    { 
-        name: 'Comstock', 
-        ticker: 'LODE', 
-        exchange: 'NYSE',
-        irUrl: 'https://comstock.inc/investors/',
-        cik: '0001445283'
-    },
-    { 
-        name: 'Duolingo', 
-        ticker: 'DUOL', 
-        exchange: 'NASDAQ',
-        irUrl: 'https://investors.duolingo.com/news',
-        cik: '0001802749'
-    },
-    { 
-        name: 'ANGI', 
-        ticker: 'ANGI', 
-        exchange: 'NASDAQ',
-        irUrl: 'https://ir.angi.com/news',
-        cik: '0001705110'
-    },
-    { 
-        name: 'Kaspi.kz', 
-        ticker: 'KSPI', 
-        exchange: 'NASDAQ',
-        irUrl: 'https://ir.kaspi.kz/news-and-events/',
-        cik: '0001838416'
-    },
-    { 
-        name: 'Litigation Capital Management', 
-        ticker: 'LIT.L', 
-        exchange: 'LSE',
-        irUrl: 'https://litigationcapital.com/investor-relations/',
-        cik: null
-    },
-    { 
-        name: 'IAC Inc.', 
-        ticker: 'IAC', 
-        exchange: 'NASDAQ',
-        irUrl: 'https://ir.iac.com/news-events/press-releases',
-        cik: '0001091883'
-    },
-    { 
-        name: 'Northern Dynasty Minerals', 
-        ticker: 'NAK', 
-        exchange: 'NYSE',
-        irUrl: 'https://www.northerndynastyminerals.com/news/',
-        cik: '0001164771'
-    },
-    { 
-        name: 'Panthera Resources', 
-        ticker: 'PAT.L', 
-        exchange: 'LSE',
-        irUrl: 'https://pantheraresources.com/news/',
-        cik: null
-    },
-    { 
-        name: 'MercadoLibre', 
-        ticker: 'MELI', 
-        exchange: 'NASDAQ',
-        irUrl: 'https://investor.mercadolibre.com/news-events/press-releases',
-        cik: '0001099590'
-    },
-    { 
-        name: 'Diageo PLC', 
-        ticker: 'DEO', 
-        exchange: 'NYSE',
-        irUrl: 'https://www.diageo.com/en/news-and-media/',
-        cik: '0000914208'
+// URL zur pitches.json im Investment-Dashboard Repository
+const PITCHES_JSON_URL = 'https://raw.githubusercontent.com/kragen777/Investment-Dashboard/main/pitches.json';
+
+// Globale Variable für Companies (wird aus pitches.json geladen)
+let companies = [];
+
+// Lade Unternehmen aus pitches.json
+async function loadCompaniesFromPitches() {
+    try {
+        const response = await fetch(PITCHES_JSON_URL);
+        if (!response.ok) throw new Error(`Fehler beim Laden der pitches.json: ${response.status}`);
+        
+        const pitches = await response.json();
+        
+        // Konvertiere pitches.json Format zu companies Format
+        companies = pitches.map(pitch => {
+            // Extrahiere Ticker aus Namen wenn vorhanden
+            const tickerMatch = pitch.ticker || pitch.name.match(/\(([A-Z.]+)\)/);
+            const ticker = tickerMatch ? (typeof tickerMatch === 'string' ? tickerMatch : tickerMatch[1]) : '';
+            
+            // Bestimme Exchange basierend auf Ticker
+            let exchange = 'NASDAQ';
+            if (ticker.endsWith('.L')) exchange = 'LSE';
+            else if (['LODE', 'NAK', 'DEO'].includes(ticker)) exchange = 'NYSE';
+            
+            return {
+                name: pitch.name.replace(/\s*\([A-Z.]+\)\s*$/, ''), // Entferne Ticker aus Name
+                ticker: ticker,
+                exchange: exchange,
+                irUrl: null, // Nicht in pitches.json, könnte später ergänzt werden
+                cik: null
+            };
+        });
+        
+        console.log(`✅ ${companies.length} Unternehmen aus pitches.json geladen`);
+        return companies;
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Companies:', error);
+        return [];
     }
-];
+}
 
 // Impact-Analyse
 function analyzeImpact(title, description) {
@@ -194,13 +162,13 @@ async function fetchCompanyNews(company) {
         news = await fetchSECFilings(company);
     }
     
-    // Wenn nichts gefunden wurde, zeige IR-Link
-    if (!news && company.irUrl) {
+    // Wenn nichts gefunden wurde, zeige Platzhalter
+    if (!news) {
         news = {
-            title: `🔗 Direkt zur Investor Relations Seite`,
-            url: company.irUrl,
-            source: 'Unternehmens-IR',
-            publishedAt: 'Besuche die IR-Seite',
+            title: `🔍 Keine aktuellen News gefunden`,
+            url: `https://www.google.com/search?q=${encodeURIComponent(company.name + ' ' + company.ticker + ' news')}`,
+            source: 'Google Suche',
+            publishedAt: 'Suche starten',
             impact: 'none'
         };
     }
@@ -243,7 +211,7 @@ function createCompanyCard(company, news) {
             critical: 'Kritische Auswirkung',
             positive: 'Positive Entwicklung',
             neutral: 'Wichtige Nachricht',
-            none: 'IR-Seite besuchen'
+            none: 'Weitere Infos'
         };
         
         impactBadge.textContent = impactTexts[news.impact];
@@ -263,6 +231,16 @@ function createCompanyCard(company, news) {
 // Dashboard laden
 async function loadDashboard() {
     const dashboard = document.getElementById('dashboard');
+    dashboard.innerHTML = '<p style="text-align: center; color: #999;">🔄 Lade Unternehmen aus pitches.json...</p>';
+    
+    // Lade zuerst die Companies aus pitches.json
+    await loadCompaniesFromPitches();
+    
+    if (companies.length === 0) {
+        dashboard.innerHTML = '<p style="text-align: center; color: #f44;">Fehler: Keine Unternehmen geladen. Bitte pitches.json prüfen.</p>';
+        return;
+    }
+    
     dashboard.innerHTML = '<p style="text-align: center; color: #999;">Lade Echtzeit-Nachrichten von Finnhub, Yahoo Finance & SEC...</p>';
     
     const results = [];
@@ -283,8 +261,8 @@ async function loadDashboard() {
         dashboard.appendChild(card);
     });
     
-    const newsCount = results.filter(r => r.news && r.news.source !== 'Unternehmens-IR').length;
-    console.log(`✅ Dashboard geladen! ${newsCount} News gefunden.`);
+    const newsCount = results.filter(r => r.news && r.news.source !== 'Google Suche').length;
+    console.log(`✅ Dashboard geladen! ${newsCount} News gefunden für ${companies.length} Unternehmen.`);
 }
 
 // Dashboard beim Laden der Seite initialisieren
